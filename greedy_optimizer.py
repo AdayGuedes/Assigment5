@@ -11,6 +11,10 @@ import time
 # PART 1: PACKAGE PRIORITIZATION (Activity Selection)
 # ============================================================================
 
+def get_end_time(time_window):
+    return time_window["end"]
+
+
 def maximize_deliveries(time_windows):
     """
     Schedule the maximum number of deliveries given time window constraints.
@@ -37,12 +41,28 @@ def maximize_deliveries(time_windows):
     # Hint: What greedy choice gives you the most room for future deliveries?
     # Hint: Think about sorting by a specific attribute
     
-    pass  # Delete this and write your code
+    sorted_by_end_time = sorted(time_windows, key=get_end_time)
+
+    last_end = 0
+    result = []
+
+    for delivery in sorted_by_end_time:
+        if delivery["start"] >= last_end:
+            last_end = delivery["end"]
+            result.append(delivery["delivery_id"])
+
+    return result
 
 
 # ============================================================================
 # PART 2: TRUCK LOADING (Fractional Knapsack)
 # ============================================================================
+
+def get_ratio(package):
+    weight = package["weight"]
+    priority = package["priority"]
+    return priority / weight
+
 
 def optimize_truck_load(packages, weight_limit):
     """
@@ -76,12 +96,38 @@ def optimize_truck_load(packages, weight_limit):
     # Hint: What ratio determines which packages are most valuable per pound?
     # Hint: You can take fractions - if you have 5 lbs capacity left and a 10 lb package, take 0.5 of it
     
-    pass  # Delete this and write your code
+    sorted_packages_by_ratio = sorted(packages, key=get_ratio, reverse=True)
+
+    current_weight = 0
+    total_priority = 0
+    result_packages = []
+
+    for package in sorted_packages_by_ratio:
+        free_weight = weight_limit - current_weight
+
+        if current_weight == weight_limit:
+            break
+
+        weight_taken = min(package["weight"], free_weight)
+        fraction = weight_taken / package["weight"]
+
+        result_packages.append({"package_id": package["package_id"], "fraction": fraction})
+        total_priority += fraction * package["priority"]
+        current_weight += weight_taken
+
+    return {
+        "total_priority": total_priority,
+        "total_weight": current_weight,
+        "packages": result_packages,
+    }
 
 
 # ============================================================================
 # PART 3: DRIVER ASSIGNMENT (Interval Scheduling)
 # ============================================================================
+
+def get_start_time(delivery):
+    return delivery["start"]
 
 def minimize_drivers(deliveries):
     """
@@ -112,7 +158,24 @@ def minimize_drivers(deliveries):
     # Hint: How do you know if a delivery overlaps with another?
     # Hint: Can you assign a delivery to an existing driver, or do you need a new one?
     
-    pass  # Delete this and write your code
+    sorted_by_start = sorted(deliveries, key=get_start_time)
+
+    assignments = []   # one list of delivery_ids per driver
+    driver_ends = []   # end time of each driver's last delivery
+
+    for delivery in sorted_by_start:
+        assigned = False
+        for i in range(len(driver_ends)):
+            if driver_ends[i] <= delivery["start"]:
+                assignments[i].append(delivery["delivery_id"])
+                driver_ends[i] = delivery["end"]
+                assigned = True
+                break
+        if not assigned:
+            assignments.append([delivery["delivery_id"]])
+            driver_ends.append(delivery["end"])
+
+    return {"num_drivers": len(assignments), "assignments": assignments}
 
 
 # ============================================================================
@@ -297,9 +360,9 @@ if __name__ == "__main__":
     
     # Uncomment these as you complete each part:
     
-    # test_package_prioritization()
-    # test_truck_loading()
-    # test_driver_assignment()
-    # benchmark_scenarios()
+    test_package_prioritization()
+    test_truck_loading()
+    test_driver_assignment()
+    benchmark_scenarios()
     
     print("\n⚠ Uncomment the test functions in the main block to run tests!")
